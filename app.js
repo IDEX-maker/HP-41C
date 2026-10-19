@@ -49,6 +49,12 @@ let ramCfg = lsGet('hp41.ram') || 'cx';
 let speed = parseInt(lsGet('hp41.speed') || '20', 10);
 let ramDirty = false;
 
+// Printer: the chip model feeds the tape; the tape is drawn on the page and sent to the print dialog on request.
+const printer = new window.Printer.Hp82143a();
+const tape = new window.TapeLib.Tape();
+let printDest = lsGet('hp41.printdest') || 'screen';
+let printMode = lsGet('hp41.printmode') || 'collect';
+
 // Fixed slots of the 41CX base system; other modules go into the first free port page.
 function guessSlot(name) {
   const n = name.toUpperCase().replace(/\.[A-Z0-9]+$/, '');
@@ -80,6 +86,7 @@ function applyRoms() {
   cpu.clearPages();
   for (const r of roms) cpu.loadPage(r.page, r.bank - 1, Nut41.parseRom(r.bytes));
   $('lcdmsg').classList.toggle('show', !hasOs());
+  if (!printer.attach(cpu)) printer.detach(cpu);       // the printer works only with the genuine printer ROM in page 6
 }
 
 function saveRam() {
@@ -404,6 +411,38 @@ function frame(t) {
   else { running = false; }
 }
 
+// ---------------------------------------------------------------- printer UI
+let paperDirty = false;
+function drawPaper() {
+  paperDirty = false;
+  const box = $('paperbox');
+  window.TapeLib.renderTape(tape, $('paper'), 3);
+  $('paperempty').style.display = tape.length ? 'none' : '';
+  $('printtape').disabled = !tape.length || printDest === 'screen';
+  box.scrollTop = box.scrollHeight;
+}
+function schedulePaper() { if (!paperDirty) { paperDirty = true; requestAnimationFrame(drawPaper); } }
+
+function printTape() {
+  if (!tape.length) return;
+  const c = document.createElement('canvas');
+  window.TapeLib.renderTape(tape, c, 3, '#000');
+  const img = $('printImg');
+  img.onload = () => { img.onload = null; window.print(); };
+  img.src = c.toDataURL('image/png');
+}
+
+printer.onLine = (line) => {
+  tape.add(line);
+  schedulePaper();
+  if (window.Printout.shouldPrintNow(printDest, printMode, line.text === '' ? 'adv' : 'line')) { printTape(); tape.clear(); schedulePaper(); }
+};
+
+$('printdest').addEventListener('change', (e) => { printDest = e.target.value; lsSet('hp41.printdest', printDest); schedulePaper(); });
+$('printmode').addEventListener('change', (e) => { printMode = e.target.value; lsSet('hp41.printmode', printMode); });
+$('printtape').addEventListener('click', () => { if (window.Printout.shouldPrintNow(printDest, printMode, 'manual')) printTape(); });
+$('cleartape').addEventListener('click', () => { tape.clear(); schedulePaper(); });
+
 // ---------------------------------------------------------------- ROM management UI
 function renderRomTable() {
   const tb = document.querySelector('#romtable tbody');
@@ -540,9 +579,19 @@ window.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.fi
 // ---------------------------------------------------------------- start
 (async function init() {
   $('ramcfg').value = ramCfg; $('speed').value = String(speed);
+  if (!['screen', 'print', 'pdf'].includes(printDest)) printDest = 'screen';
+  if (!['collect', 'immediate'].includes(printMode)) printMode = 'collect';
+  $('printdest').value = printDest; $('printmode').value = printMode; drawPaper();
   if (!Array.from($('speed').options).some((o) => o.value === String(speed))) { speed = 20; $('speed').value = '20'; }
   const stored = await dbAll();
   roms = stored.map((r) => ({ name: r.name, bytes: r.bytes, page: r.page, bank: r.bank }));
+  // ROMs stored before the printer existed: add the printer ROM once, if page 6 is free
+  if (hasOs() && !roms.some((r) => r.page === 6 && r.bank === 1)) {
+    try {
+      const r = await fetch('roms/PRINTER.ROM');
+      if (r.ok) { const rec = { name: 'PRINTER.ROM', bytes: new Uint8Array(await r.arrayBuffer()), page: 6, bank: 1 }; roms.push(rec); await persistRom(rec); }
+    } catch (e) { /* offline and not cached yet: try again next time */ }
+  }
   applyRoms(); renderRomTable();
   restoreTimer();
   if (hasOs()) {
@@ -551,6 +600,6 @@ window.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.fi
     if (wasOn) { cpu.run(60000); tapKey(0x18, 90); }   // come back as it was left
   } else { cpu.setRamConfig(ramCfg); cpu.reset(); }
   updateStatus(); renderDisplay();
-  window.hp41 = { cpu, tapKey, pumpTimer };       // handy for debugging in the console
+  window.hp41 = { cpu, tapKey, pumpTimer, tape, printer };       // handy for debugging in the console
 })();
 })();
