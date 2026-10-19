@@ -8,4 +8,6 @@
 !roms/NUT1-F.ROM
 !roms/NUT2-L.ROM
 !roms/XFNS3-3B.ROM
+!roms/TIME-3B.ROM
+!roms/XFNS5-2D.ROM
 node_modules/

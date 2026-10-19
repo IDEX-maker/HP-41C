@@ -15,7 +15,8 @@ const WSIZE = 14, EXPSIZE = 3, SSIZE = 14, STACK_DEPTH = 4;
 const PAGE_SIZE = 4096, MAX_PAGE = 16, MAX_BANK = 4, MAX_RAM = 1024;
 const DISP_DIGITS = 12;
 const LEFT = DISP_DIGITS - 1, RIGHT = 0;
-const PF_LCD = 0xfd, PF_HALFNUT = 0x10;
+const PF_LCD = 0xfd, PF_HALFNUT = 0x10, PF_PHINEAS = 0xfb;
+const EF_TIMER = 12, EF_SERVICE_REQUEST = 13;
 const KBD_DEBOUNCE_CYCLES = 32;
 
 const ST_NORMAL = 0, ST_LONG = 1, ST_CXISA = 2, ST_LDI = 3, ST_SELPF = 4;
@@ -88,6 +89,16 @@ class Nut41 {
                   c: new Uint8Array(DISP_DIGITS), ann: 0, enable: false };
 
     // tone output hook: onTone(pulseWidthCycles) ; set by UI
+    // Phineas clock chip (Time module / HP-41CX). Ticks every 1/100 s, driven by tickTimer().
+    this.extFlag = new Uint8Array(14);
+    this.ph = {
+      timerSel: 0, hold: false, status: 1 << 5,            // PUS (power-up status) set
+      clock: [new Uint8Array(WSIZE), new Uint8Array(WSIZE)],
+      alarm: [new Uint8Array(WSIZE), new Uint8Array(WSIZE)],
+      scratch: [new Uint8Array(WSIZE), new Uint8Array(WSIZE)],
+      it: new Uint8Array(5), itTc: new Uint8Array(5), af: new Uint8Array(4), selected: false,
+    };
+
     this.onSleep = null;
     this.lastFoChange = 0;
     this.onFo = null;
@@ -469,7 +480,7 @@ class Nut41 {
       ops[0x00c + o] = () => { cpu.carry = cpu.s[t]; };                        // ?FSET
       ops[0x014 + o] = () => { cpu.carry = cpu._pt() === t ? 1 : 0; };         // ?P=
       ops[0x01c + o] = () => { cpu._setPt(t); };                               // P=
-      ops[0x02c + o] = () => { cpu.carry = 0; };                               // ?ext flag (none wired)
+      ops[0x02c + o] = () => { cpu.carry = cpu.extFlag[t]; };                  // ?ext flag (timer / service request)
       ops[0x03c + o] = () => {                                                 // RCR
         const tmp = new Uint8Array(WSIZE);
         let j = t;
@@ -564,12 +575,18 @@ class Nut41 {
       cpu.c[6] = a >> 12; cpu.c[5] = (a >> 8) & 0xf; cpu.c[4] = (a >> 4) & 0xf; cpu.c[3] = a & 0xf;
     };
     ops[0x230] = () => { cpu.pc = (cpu.pc & 0xff00) | cpu.keyBuf; };            // KEYS=>PC
-    ops[0x270] = () => { cpu.ramAddr = ((cpu.c[2] << 8) | (cpu.c[1] << 4) | cpu.c[0]) & 0x3ff; };  // C=>DATA ADDR
+    ops[0x270] = () => {                                                        // C=>DATA ADDR
+      cpu.ramAddr = ((cpu.c[2] << 8) | (cpu.c[1] << 4) | cpu.c[0]) & 0x3ff;
+      cpu.ph.selected = false; cpu._phFlags();
+    };
     ops[0x2f0] = () => cpu._cToData();                                          // C=>DATA
     ops[0x330] = () => { cpu.cxisaAddr = cpu._cAddr(); cpu.instState = ST_CXISA; };   // C=ROM (CXISA)
     ops[0x370] = () => { for (let i = 0; i < WSIZE; i++) cpu.c[i] |= cpu.a[i]; };      // C=C OR A
     ops[0x3b0] = () => { for (let i = 0; i < WSIZE; i++) cpu.c[i] &= cpu.a[i]; };      // C=C AND A
-    ops[0x3f0] = () => { cpu.pfAddr = (cpu.c[1] << 4) | cpu.c[0]; };           // C=>PERIPH ADDR
+    ops[0x3f0] = () => {                                                        // C=>PERIPH ADDR
+      cpu.pfAddr = (cpu.c[1] << 4) | cpu.c[0];
+      cpu.ph.selected = cpu.pfAddr === PF_PHINEAS; cpu._phFlags();
+    };
 
     this.ops = ops;
   }
@@ -577,13 +594,134 @@ class Nut41 {
   _pfRead(n) {
     if (this.pfAddr === PF_LCD) { this._lcdRdN(n); return true; }
     if (this.pfAddr === PF_HALFNUT) return true;
+    if (this.pfAddr === PF_PHINEAS) return this._phRead(n);
     return false;
   }
 
   _pfWriteN(n) {
     if (this.pfAddr === PF_LCD) { this._lcdWrN(n); return true; }
     if (this.pfAddr === PF_HALFNUT) return true;
+    if (this.pfAddr === PF_PHINEAS) return this._phWrite(n);
     return false;
+  }
+
+  // ---------- Phineas clock chip ----------
+
+  _phBit(bit) { return (this.ph.status >> bit & 1) === 1; }
+  _phSet(bit, v) { if (v) this.ph.status |= 1 << bit; else this.ph.status &= ~(1 << bit); }
+
+  _phFlags() {
+    const ph = this.ph;
+    // bits: 0 ALMA, 1 DTZA, 2 ALMB, 3 DTZB, 4 DTZIT, 5 PUS
+    const pending = !this._phBit(5) && (ph.status & 0x1f) !== 0;
+    this.extFlag[EF_SERVICE_REQUEST] = pending ? 1 : 0;
+    this.extFlag[EF_TIMER] = pending && ph.selected ? 1 : 0;
+    return pending;
+  }
+
+  _phRead(n) {
+    const ph = this.ph, c = this.c, sel = ph.timerSel;
+    if (!ph.selected) return false;
+    c.fill(0);
+    switch (n) {
+      case 0x0: c.set(ph.clock[sel]); break;
+      case 0x1: c.set(ph.clock[sel]); ph.hold = true; break;
+      case 0x2: c.set(ph.alarm[sel]); break;
+      case 0x3:
+        if (sel) { for (let i = 0; i < 4; i++) c[i + 1] = ph.af[i]; }
+        else for (let i = 0; i < 4; i++) c[i] = (ph.status >> (4 * i)) & 0xf;
+        break;
+      case 0x4: c.set(ph.scratch[sel]); break;
+      case 0x5: for (let i = 0; i < 5; i++) c[i] = ph.it[i]; break;
+      default: break;
+    }
+    return true;
+  }
+
+  _phWrite(n) {
+    const ph = this.ph, c = this.c, sel = ph.timerSel;
+    if (!ph.selected) return false;
+    switch (n) {
+      case 0x0: ph.clock[sel].set(c); break;
+      case 0x1: ph.clock[sel].set(c); ph.hold = false; break;
+      case 0x2: ph.alarm[sel].set(c); break;
+      case 0x3:
+        if (sel) { for (let i = 0; i < 4; i++) ph.af[i] = c[i + 1]; ph.af[3] &= 1; }
+        else {
+          // only bits 0-5 can be cleared by writing zero
+          if (!(c[0] & 1)) this._phSet(0, false);
+          if (!(c[0] & 2)) this._phSet(1, false);
+          if (!(c[0] & 4)) this._phSet(2, false);
+          if (!(c[0] & 8)) this._phSet(3, false);
+          if (!(c[1] & 1)) this._phSet(4, false);
+          if (!(c[1] & 2)) this._phSet(5, false);
+          this._phFlags();
+        }
+        break;
+      case 0x4: ph.scratch[sel].set(c); break;
+      case 0x5: for (let i = 0; i < 5; i++) { ph.itTc[i] = c[i]; ph.it[i] = 0; } this._phSet(10, true); break;
+      case 0x7: this._phSet(10, false); break;
+      case 0x8: this._phSet(11 + sel, false); break;
+      case 0x9: this._phSet(11 + sel, true); break;
+      case 0xa: this._phSet(8 + sel, false); break;
+      case 0xb: this._phSet(8 + sel, true); break;
+      case 0xc: this._phSet(6 + sel, false); break;
+      case 0xd: this._phSet(6 + sel, true); break;
+      case 0xe: ph.timerSel = 1; break;
+      case 0xf: ph.timerSel = 0; break;
+      default: break;
+    }
+    return true;
+  }
+
+  static _bcdToNum(r, n) { let v = 0; for (let i = n - 1; i >= 0; i--) v = v * 10 + r[i]; return v; }
+  static _numToBcd(v, r, n) { for (let i = 0; i < n; i++) { r[i] = v % 10; v = Math.floor(v / 10); } }
+
+  /** Advance the clock chip by `ticks` hundredths of a second. Wakes the CPU on an alarm.
+   *  Returns true if the CPU was woken. */
+  tickTimer(ticks) {
+    if (!(ticks > 0)) return false;
+    const ph = this.ph;
+    for (let sel = 0; sel < 2; sel++) {
+      if (!this._phBit(6 + sel)) continue;                  // clock not running
+      const old = Nut41._bcdToNum(ph.clock[sel], WSIZE);
+      let nv = old + ticks;
+      const overflow = nv > 99999999999999;
+      if (overflow) { nv = nv % 100000000000000; this._phSet(1 + 2 * sel, true); }
+      Nut41._numToBcd(nv, ph.clock[sel], WSIZE);
+      if (this._phBit(8 + sel)) {                           // alarm enabled
+        const al = Nut41._bcdToNum(ph.alarm[sel], WSIZE);
+        const hit = overflow ? (al > old || al <= nv) : (al > old && al <= nv);
+        if (hit) this._phSet(0 + 2 * sel, true);
+      }
+    }
+    if (this._phBit(10)) {                                   // interval timer
+      let v = Nut41._bcdToNum(ph.it, 5) + ticks;
+      const tc = Nut41._bcdToNum(ph.itTc, 5);
+      if (v >= tc) { v = 0; this._phSet(4, true); }
+      Nut41._numToBcd(v, ph.it, 5);
+    }
+    const pending = this._phFlags();
+    if (pending && !this.awake) { this.awake = true; this._snapshot(); return true; }
+    return false;
+  }
+
+  /** Persistable clock-chip state (hex strings), see loadTimerState(). */
+  timerState() {
+    const hex = (r) => Array.from(r).reverse().map((d) => d.toString(16)).join('');
+    const ph = this.ph;
+    return { status: ph.status, sel: ph.timerSel, a: hex(ph.clock[0]), b: hex(ph.clock[1]),
+      aa: hex(ph.alarm[0]), ab: hex(ph.alarm[1]), sa: hex(ph.scratch[0]), sb: hex(ph.scratch[1]),
+      it: hex(ph.it), itTc: hex(ph.itTc), af: hex(ph.af) };
+  }
+
+  loadTimerState(o) {
+    const unhex = (str, r) => { for (let i = 0; i < r.length; i++) r[i] = parseInt(str[str.length - 1 - i] || '0', 16) & 0xf; };
+    const ph = this.ph;
+    ph.status = o.status | 0; ph.timerSel = o.sel ? 1 : 0;
+    unhex(o.a, ph.clock[0]); unhex(o.b, ph.clock[1]); unhex(o.aa, ph.alarm[0]); unhex(o.ab, ph.alarm[1]);
+    unhex(o.sa, ph.scratch[0]); unhex(o.sb, ph.scratch[1]); unhex(o.it, ph.it); unhex(o.itTc, ph.itTc); unhex(o.af, ph.af);
+    this._phFlags();
   }
 
   _readRegN(n) {

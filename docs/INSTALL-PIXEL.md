@@ -33,7 +33,7 @@ If neither menu entry appears:
 ## Step 3: first launch
 1. Tap the **HP-41** icon. It opens full-screen without browser bars.
 2. Tap **ROMs & setup** to expand it.
-3. Tap **Use built-in 41CX ROMs**.
+3. Tap **Use built-in 41CX ROMs** (this includes the clock, so `TIME` and `DATE` work).
 4. The calculator starts and shows `MEMORY LOST` the first time. That is normal for a cold start.
 5. Press any key. Try `1 2 ENTER↑ 3 +`; it should show `15.0000`.
 
@@ -45,9 +45,15 @@ If neither menu entry appears:
 - **ON** turns the calculator off and on. Memory and the on/off state are saved between sessions.
 - **ROMs & setup** also lets you change the speed, or choose 41C / 41CV / 41CX memory.
 
+## Optional: import and export programs
+- **Import program (.RAW)…** loads a `.RAW` program file from the phone's storage into the calculator's
+  program memory. Afterwards run it with `XEQ`, `ALPHA` (label name) `ALPHA`, or press `R/S`.
+- **Export programs (.RAW)** saves your programs as `hp41-programs.raw` in the phone's Downloads, so you
+  can back them up or move them to a PC.
+
 ## Optional: add other ROM modules
-1. Copy `.ROM` files (8192 bytes each) to the phone, for example through Google Drive or USB.
-2. In the app open **ROMs & setup** and tap **Load other ROM files…**.
+1. Copy `.ROM` or `.MOD` files to the phone, for example through Google Drive or USB.
+2. In the app open **ROMs & setup** and tap **Load other ROM/MOD files…**.
 3. Pick the files. Each gets a page number, which you can change in the table.
 
 Please read the ROM notice in the main [README](../README.md#rom-notice) about the copyright status

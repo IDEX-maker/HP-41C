@@ -49,19 +49,28 @@ let ramCfg = lsGet('hp41.ram') || 'cx';
 let speed = parseInt(lsGet('hp41.speed') || '20', 10);
 let ramDirty = false;
 
-function guessPage(name) {
+// Fixed slots of the 41CX base system; other modules go into the first free port page.
+function guessSlot(name) {
   const n = name.toUpperCase().replace(/\.[A-Z0-9]+$/, '');
-  if (/^NUT0/.test(n)) return 0;
-  if (/^NUT1/.test(n)) return 1;
-  if (/^NUT2/.test(n)) return 2;
-  if (/^XFNS3/.test(n)) return 3;
+  if (/^NUT0/.test(n)) return { page: 0, bank: 1 };
+  if (/^NUT1/.test(n)) return { page: 1, bank: 1 };
+  if (/^NUT2/.test(n)) return { page: 2, bank: 1 };
+  if (/^XFNS3/.test(n)) return { page: 3, bank: 1 };
+  if (/^TIME-/.test(n)) return { page: 5, bank: 1 };      // Time module, bank 1
+  if (/^XFNS5/.test(n)) return { page: 5, bank: 2 };      // extended functions, bank 2 of the same page
   return null;
 }
 
 function nextFreePage(excludeName) {
-  for (let p = 5; p < 16; p++)
+  for (const p of [8, 9, 10, 11, 12, 13, 14, 15, 6, 7, 4])
     if (!roms.some((r) => r.name !== excludeName && r.page === p && r.bank === 1)) return p;
-  return 5;
+  return 8;
+}
+
+function wordsToBytes(w) {
+  const b = new Uint8Array(8192);
+  for (let i = 0; i < 4096; i++) { b[2 * i] = w[i] >> 8; b[2 * i + 1] = w[i] & 0xff; }
+  return b;
 }
 
 function hasOs() { return [0, 1, 2].every((p) => roms.some((r) => r.page === p && r.bank === 1)); }
@@ -76,8 +85,28 @@ function saveRam() {
   if (!ramDirty) return;
   lsSet('hp41.mem.' + ramCfg, cpu.saveRam());
   lsSet('hp41.on', cpu.snap.enable ? '1' : '0');
+  lsSet('hp41.timer', JSON.stringify({ t: Date.now(), s: cpu.timerState() }));
   ramDirty = false;
 }
+
+// The clock chip runs on wall-clock time (100 ticks/s), also while the calculator is off or the
+// page is closed, like the real Time module. An alarm wakes the calculator.
+let timerLast = Date.now();
+function pumpTimer() {
+  const now = Date.now();
+  const ticks = Math.floor((now - timerLast) / 10);
+  if (ticks <= 0) return;
+  timerLast += ticks * 10;
+  if (cpu.tickTimer(ticks)) { ramDirty = true; kick(); }
+}
+function restoreTimer() {
+  timerLast = Date.now();
+  try {
+    const o = JSON.parse(lsGet('hp41.timer') || 'null');
+    if (o && o.s) { cpu.loadTimerState(o.s); timerLast = o.t; pumpTimer(); }
+  } catch (e) { timerLast = Date.now(); }
+}
+setInterval(pumpTimer, 250);
 
 function powerUp(clearRam) {
   cpu.setRamConfig(ramCfg);
@@ -172,9 +201,9 @@ const ROWS = [
     { c: 0x81, f: 'COS', g: 'COS⁻¹', a: 'I' }, { c: 0xc1, f: 'TAN', g: 'TAN⁻¹', a: 'J' }] },
   { cls: 'row5', keys: [
     { c: 0x12, f: '', shift: 1 }, { c: 0x32, f: 'XEQ', g: 'ASN', a: 'K' }, { c: 0x72, f: 'STO', g: 'LBL', a: 'L' },
-    { c: 0x82, f: 'RCL', g: 'GTO', a: 'M' }, { c: 0xc2, f: 'SST', g: 'BST', a: 'N' }] },
+    { c: 0x82, f: 'RCL', g: 'GTO', a: 'M' }, { c: 0xc2, f: 'SST', g: 'BST' }] },
   { cls: 'row5', keys: [
-    { c: 0x13, f: 'ENTER↑', g: 'CATALOG', span: 2, wide: 1 }, { c: 0x73, f: 'CHS', g: 'ISG', a: 'O' },
+    { c: 0x13, f: 'ENTER↑', g: 'CATALOG', a: 'N', span: 2, wide: 1 }, { c: 0x73, f: 'CHS', g: 'ISG', a: 'O' },
     { c: 0x83, f: 'EEX', g: 'RTN', a: 'P' }, { c: 0xc3, f: '←', g: 'CLX/A' }] },
   { cls: 'row4', keys: [
     { c: 0x14, f: '−', g: 'x=y?', a: 'Q', num: 1 }, { c: 0x34, f: '7', g: 'SF', a: 'R', num: 1 }, { c: 0x74, f: '8', g: 'CF', a: 'S', num: 1 }, { c: 0x84, f: '9', g: 'FS?', a: 'T', num: 1 }] },
@@ -366,6 +395,7 @@ function advance(budget) {
 
 function frame(t) {
   const dt = Math.min(100, t - lastT); lastT = t;
+  pumpTimer();
   if (hasOs()) advance(Math.round(speed * REAL_CPS * dt / 1000));
   if (tone && cpu.cycles - tone.last > 30) endTone();
   renderDisplay();
@@ -405,21 +435,69 @@ function restart() {
 
 async function addFiles(files) {
   const msgs = [];
-  for (const f of files) {
-    const bytes = new Uint8Array(await f.arrayBuffer());
-    if (bytes.length !== 8192) { msgs.push(`${f.name}: skipped (${bytes.length} bytes, expected 8192)`); continue; }
-    const name = f.name;
-    const existing = roms.find((r) => r.name === name);
-    let page = existing ? existing.page : guessPage(name);
-    if (page === null) page = nextFreePage(name);
-    // a newer OS page replaces the previous one on the same page/bank
-    roms = roms.filter((r) => r.name !== name && !(guessPage(name) !== null && r.page === page && r.bank === 1));
-    const rec = { name, bytes, page, bank: 1 };
+  const rawFiles = files.filter((f) => /\.raw$/i.test(f.name));
+  files = files.filter((f) => !/\.raw$/i.test(f.name));
+  const put = async (rec) => {
+    roms = roms.filter((r) => r.name !== rec.name && !(rec.slotted && r.page === rec.page && r.bank === rec.bank));
+    delete rec.slotted;
     roms.push(rec);
     await persistRom(rec);
+  };
+  for (const f of files) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const name = f.name;
+    const existing = roms.find((r) => r.name === name);
+    if (bytes.length !== 8192) {
+      const mod = window.Mod.parseMod(bytes);
+      if (!mod) { msgs.push(`${name}: skipped (not an 8192-byte .ROM or a .MOD file)`); continue; }
+      for (const pg of mod.pages) {
+        if (pg.ram) { msgs.push(`${name}: RAM page "${pg.name}" skipped (RAM modules are not supported)`); continue; }
+        const label = `${name.replace(/\.[^.]*$/, '')}:${pg.name || pg.page}`;
+        let page = pg.page, bank = pg.bank || 1;
+        if (page > 15) page = nextFreePage(label);
+        await put({ name: label, bytes: wordsToBytes(pg.words), page, bank, slotted: true });
+      }
+      continue;
+    }
+    const slot = guessSlot(name);
+    const page = existing ? existing.page : slot ? slot.page : nextFreePage(name);
+    const bank = existing ? existing.bank : slot ? slot.bank : 1;
+    await put({ name, bytes, page, bank, slotted: !!slot });
   }
-  restart();
+  if (files.length) restart();
+  if (rawFiles.length) msgs.push(...(await importPrograms(rawFiles)));
   if (msgs.length) $('status').textContent = msgs.join('\n');
+}
+
+// Programs: .RAW files are inserted into the calculator's program memory (see raw.js).
+async function importPrograms(files) {
+  const msgs = [];
+  if (!hasOs()) return ['Load the ROMs first, then import programs.'];
+  for (const f of files) {
+    try {
+      const r = window.Raw.importRaw(cpu, new Uint8Array(await f.arrayBuffer()));
+      msgs.push(`${f.name}: imported ${r.programs} program${r.programs === 1 ? '' : 's'} (${r.registersUsed} registers used, ${r.free} free)`);
+    } catch (e) { msgs.push(`${f.name}: ${e.message}`); }
+  }
+  ramDirty = true; saveRam();
+  cpu.reset(); keyQueue.length = 0; activeKey = null;      // restart the firmware so it re-reads its memory
+  cpu.run(400000);
+  if (!cpu.snap.enable) tapKey(0x18, 90);                  // wake it up
+  kick();
+  return msgs;
+}
+
+function exportPrograms() {
+  try {
+    const raw = window.Raw.exportRaw(cpu);
+    if (!raw.length) { $('status').textContent = 'There are no programs to export.'; return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([raw], { type: 'application/octet-stream' }));
+    a.download = 'hp41-programs.raw';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    $('status').textContent = `Exported ${raw.length} bytes to hp41-programs.raw`;
+  } catch (e) { $('status').textContent = 'Export failed: ' + e.message; }
 }
 
 function updateStatus() {
@@ -430,7 +508,7 @@ function updateStatus() {
   $('model').textContent = { c: '41C', cv: '41CV', cx: '41CX' }[ramCfg];
 }
 
-const BUNDLED = ['NUT0-N.ROM', 'NUT1-F.ROM', 'NUT2-L.ROM', 'XFNS3-3B.ROM'];
+const BUNDLED = ['NUT0-N.ROM', 'NUT1-F.ROM', 'NUT2-L.ROM', 'XFNS3-3B.ROM', 'TIME-3B.ROM', 'XFNS5-2D.ROM'];
 $('bundled').addEventListener('click', async () => {
   try {
     const files = [];
@@ -443,6 +521,8 @@ $('bundled').addEventListener('click', async () => {
     $('romPanel').open = false;
   } catch (e) { $('status').textContent = 'Could not load built-in ROMs: ' + e.message; }
 });
+$('rawfile').addEventListener('change', (e) => { addFiles(Array.from(e.target.files)); e.target.value = ''; });
+$('exportraw').addEventListener('click', exportPrograms);
 $('romfile').addEventListener('change', (e) => { addFiles(Array.from(e.target.files)); e.target.value = ''; });
 $('forget').addEventListener('click', async () => { if (!confirm('Remove all stored ROMs from this browser?')) return; roms = []; await dbClear(); restart(); });
 $('reset').addEventListener('click', () => { restart(); });
@@ -463,12 +543,13 @@ window.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.fi
   const stored = await dbAll();
   roms = stored.map((r) => ({ name: r.name, bytes: r.bytes, page: r.page, bank: r.bank }));
   applyRoms(); renderRomTable();
+  restoreTimer();
   if (hasOs()) {
     const wasOn = lsGet('hp41.on') === '1' && !!lsGet('hp41.mem.' + ramCfg);
     powerUp(false); $('romPanel').open = false; kick();
     if (wasOn) { cpu.run(60000); tapKey(0x18, 90); }   // come back as it was left
   } else { cpu.setRamConfig(ramCfg); cpu.reset(); }
   updateStatus(); renderDisplay();
-  window.hp41 = { cpu, tapKey };       // handy for debugging in the console
+  window.hp41 = { cpu, tapKey, pumpTimer };       // handy for debugging in the console
 })();
 })();
