@@ -83,10 +83,11 @@ are recognised in `CATALOG 2`, alone and together.
 
 ### Time module
 The 41CX clock runs in real time (also while the calculator is off or the page is closed), keeps its
-setting between visits. `TIME` and `DATE` were verified on the real firmware, and the alarm, wake-up and
-interval-timer logic of the clock chip is unit-tested (`tools/chiptest.js`); the other Time module
-functions use the same chip but have not each been tried. An alarm wakes the calculator while the page
-is open; a closed page cannot beep.
+setting between visits. Verified on the real firmware: `TIME`, `DATE`, `SETIME`, `SETDATE`, `CLOCK`, the
+stopwatch (`RUNSW`, `STOPSW`, `SW`; in a real-time browser test it read 10.99 s for 11.0 s) and alarms
+(`XYZALM`, `ALMCAT`, `CLALMA`: a due alarm wakes a switched-off calculator, shows its message and drives the
+beeper until a key is pressed). The other Time functions (`ALMNOW`, `SETAF`, `CORRECT`, …) use the same chip
+but have not each been tried. An alarm only rings while the app or page is open; a closed page cannot beep.
 
 - Memory (registers and programs) is kept between visits, like Continuous Memory.
 - ALPHA letters follow the real keyboard (`N` is on `ENTER↑`, `O` on `CHS`, `P` on `EEX`).
@@ -108,6 +109,7 @@ Headless tests (Node 18+, using the ROMs in `roms/`; `ROM_DIR` and `EXTRA_ROM_DI
 ```
 node tools/rawtest.js     # .RAW export/import round trip on the real firmware
 node tools/chiptest.js    # clock chip: alarm, wake-up, interval timer
+node tools/alarmtest.js   # stopwatch and alarms through the firmware
 node tools/timetest.js roms   # TIME / DATE through the firmware
 node tools/modtest.js     # extra ROM modules (needs the larger ROM collection)
 node tools/keys.js <romDir> "1 2 ENTER 3 +"   # prints 15.0000

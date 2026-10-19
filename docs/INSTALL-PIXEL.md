@@ -66,6 +66,25 @@ In ALPHA mode you type the blue letters on the keys (for example `S` is on the `
 `CLOCK` shows a live clock (any key stops it); `TIME` and `DATE` show the current values.
 If you get `DATA ERROR`, the number was not a valid `HH.MMSS` or `MM.DDYYYY` value; enter it again.
 
+## Stopwatch and alarms
+These were tested on the emulated 41CX firmware (the alarm also in a real-time browser test). Set the time
+and date first (see above).
+
+**Stopwatch**
+- `XEQ` `ALPHA` `R U N S W` `ALPHA` starts it silently; `XEQ` `ALPHA` `S T O P S W` `ALPHA` stops it.
+- `XEQ` `ALPHA` `S W` `ALPHA` shows it as `HH:MM:SS.hh`. Inside the `SW` display, `R/S` starts and stops it.
+
+**Alarm** (one-time alarm for a date and time)
+1. Type the date as `MM.DDYYYY` and press `ENTER↑`, then type the time as `HH.MMSS` (for example
+   `10.192026` `ENTER↑` `10.3105` for 19 Oct 2026 at 10:31:05).
+2. Run `XEQ` `ALPHA` `X Y Z A L M` `ALPHA`. Press `R/S` to clear the prompt.
+3. `XEQ` `ALPHA` `A L M C A T` `ALPHA` lists the alarms (for example `10:31AM 10/19`); `CLALMA` clears them.
+4. When the time comes the calculator wakes up even if it is switched off, shows the alarm and beeps until
+   you press any key.
+
+An alarm only rings while the app is open on the screen or running in the background. On Android the browser
+may pause a background app, and a closed app cannot ring, so keep the app open for alarms you depend on.
+
 ## Optional: import and export programs
 - **Import program (.RAW)…** loads a `.RAW` program file from the phone's storage into the calculator's
   program memory. Afterwards run it with `XEQ`, `ALPHA` (label name) `ALPHA`, or press `R/S`.

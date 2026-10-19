@@ -48,3 +48,12 @@ function catalog2(cpu) {
   return seen;
 }
 module.exports.catalog2 = catalog2;
+
+// Run a function by name and return the distinct display strings seen while it executes (for scrolling output).
+function xeqSample(cpu, name, maxCycles = 60000) {
+  keys(cpu, 'XEQ ALPHA ' + name.split('').join(' '));
+  const seen = []; cpu.pressKey(0xc4); runT(cpu, 1500); cpu.releaseKey();
+  for (let n = 0; n < maxCycles && cpu.awake; n += 300) { runT(cpu, 300); const t = text(cpu).trim(); if (t && seen[seen.length - 1] !== t) seen.push(t); }
+  return seen;
+}
+module.exports.xeqSample = xeqSample;
