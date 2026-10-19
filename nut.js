@@ -15,6 +15,7 @@ const WSIZE = 14, EXPSIZE = 3, SSIZE = 14, STACK_DEPTH = 4;
 const PAGE_SIZE = 4096, MAX_PAGE = 16, MAX_BANK = 4, MAX_RAM = 1024;
 const DISP_DIGITS = 12;
 const LEFT = DISP_DIGITS - 1, RIGHT = 0;
+const PERTCT_PRINTER = 9;   // PERTCT code of the HP 82143A printer
 const PF_LCD = 0xfd, PF_HALFNUT = 0x10, PF_PHINEAS = 0xfb;
 const EF_TIMER = 12, EF_SERVICE_REQUEST = 13;
 const KBD_DEBOUNCE_CYCLES = 32;
@@ -65,6 +66,9 @@ class Nut41 {
     this.firstWord = 0; this.cxisaAddr = 0; this.selpf = 0;
     this.prevPc = 0;
     this.pfAddr = 0; this.ramAddr = 0;
+    this.printer = null;             // Hp82143a (printer.js) answering PERTCT 9, or null
+    this.trapAt = null;              // Uint8Array(65536): ROM addresses executed as RTN (see setTraps)
+    this.onPf = null;                // debug hook: (kind, pfAddr, n, c) for peripheral accesses
     this.cycles = 0;
 
     // ROM: pages[bank][page] -> Uint16Array(4096)
@@ -124,6 +128,13 @@ class Nut41 {
     this.pages[bank][page] = w;
   }
 
+  /** Make the given ROM addresses behave as RTN (used to skip printer handshake routines). Empty list clears. */
+  setTraps(pcs) {
+    if (!pcs.length) { this.trapAt = null; return; }
+    this.trapAt = new Uint8Array(65536);
+    for (const a of pcs) this.trapAt[a] = 1;
+  }
+
   clearPages() {
     for (let b = 0; b < MAX_BANK; b++) this.pages[b].fill(null);
   }
@@ -152,6 +163,7 @@ class Nut41 {
     this.kbState = KB_IDLE; this.keyDown = false;
     this.decimal = false;
     this.cycles = 0;
+    if (this.printer) this.printer.reset();
     this.dA.fill(0); this.dB.fill(0); this.dC.fill(0);
     this.ann = 0; this.dispEnable = false; this.dispCount = 0;
     this._snapshot();
@@ -585,6 +597,7 @@ class Nut41 {
     ops[0x3b0] = () => { for (let i = 0; i < WSIZE; i++) cpu.c[i] &= cpu.a[i]; };      // C=C AND A
     ops[0x3f0] = () => {                                                        // C=>PERIPH ADDR
       cpu.pfAddr = (cpu.c[1] << 4) | cpu.c[0];
+      if (cpu.onPf) cpu.onPf('sel', cpu.pfAddr, 0, cpu.c);
       cpu.ph.selected = cpu.pfAddr === PF_PHINEAS; cpu._phFlags();
     };
 
@@ -592,6 +605,7 @@ class Nut41 {
   }
 
   _pfRead(n) {
+    if (this.onPf) this.onPf('rd', this.pfAddr, n, this.c);
     if (this.pfAddr === PF_LCD) { this._lcdRdN(n); return true; }
     if (this.pfAddr === PF_HALFNUT) return true;
     if (this.pfAddr === PF_PHINEAS) return this._phRead(n);
@@ -599,6 +613,7 @@ class Nut41 {
   }
 
   _pfWriteN(n) {
+    if (this.onPf) this.onPf('wr', this.pfAddr, n, this.c);
     if (this.pfAddr === PF_LCD) { this._lcdWrN(n); return true; }
     if (this.pfAddr === PF_HALFNUT) return true;
     if (this.pfAddr === PF_PHINEAS) return this._phWrite(n);
@@ -766,6 +781,12 @@ class Nut41 {
 
     if (!this.awake) return false;
 
+    if (this.trapAt !== null && this.instState === ST_NORMAL && this.trapAt[this.pc] === 1) {
+      this.pc = this._pop();                     // trapped subroutine: return at once
+      this.cycles++;
+      return true;
+    }
+
     this.prevPc = this.instState === ST_CXISA ? this.cxisaAddr : this.pc;
     const op = this.fetch(this.prevPc);
     this.prevCarry = this.carry;
@@ -801,8 +822,11 @@ class Nut41 {
         break;
       case ST_SELPF:
         this.pc = (this.pc + 1) & 0xffff;
-        // no smart peripherals are installed: flag is always false
-        if ((op & 0x3f) === 0x03) this.carry = 0;
+        if (this.onPf) this.onPf('test', this.pfAddr, op, this.c);
+        if (this.printer && this.selpf === PERTCT_PRINTER) {
+          if ((op & 0x3f) === 0x03) this.carry = this.printer.flag(op >> 6) ? 1 : 0;   // flag test
+          else if (op === 0x007) this.printer.write((this.c[2] << 8) | (this.c[1] << 4) | this.c[0]);   // C[2:0] to the printer
+        } else if ((op & 0x3f) === 0x03) this.carry = 0;    // no other smart peripherals: flag is always false
         if (op & 1) this.instState = ST_NORMAL;
         break;
     }
