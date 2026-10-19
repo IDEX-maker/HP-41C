@@ -10,6 +10,48 @@ The four 41CX OS ROMs (`roms/NUT0-N`, `NUT1-F`, `NUT2-L`, `XFNS3-3B`) are includ
 *Load other ROM files…* (or drag and drop). Those are read locally, stored in the browser's
 IndexedDB, and never uploaded.
 
+## Run it
+
+**Web page (PC, Mac, Linux, Chromebook, phone):** <https://idex-maker.github.io/HP-41C/>
+
+Open the link, expand **ROMs & setup**, and tap **Use built-in 41CX ROMs**. The calculator powers
+on showing `MEMORY LOST` the first time; after that it remembers its memory and on/off state.
+Works in current Chrome, Edge, Firefox and Safari. Everything runs in your browser; nothing is
+sent to a server.
+
+### Install on a Google Pixel (or any Android phone)
+1. Open <https://idex-maker.github.io/HP-41C/> in **Chrome**.
+2. Tap the **⋮** menu, then **Install app** (some versions say **Add to Home screen**), then **Install**.
+3. Open **HP-41** from the home screen. It runs full-screen and works offline.
+4. First launch only: open **ROMs & setup** and tap **Use built-in 41CX ROMs**.
+
+To add other ROM modules, tap **Load other ROM files…** and pick `.ROM` files from the phone's
+storage (copy them over via Google Drive or USB first). Rotate the phone to portrait; the keys are
+sized for touch.
+
+### Install on a PC or Mac (optional, gives it its own window)
+Open the link in **Chrome or Edge** and click the install icon at the right end of the address bar
+(or menu → *Install HP-41* / *Apps → Install this site as an app*). Safari on macOS: *File → Add to Dock*.
+iPhone/iPad: open it in Safari, tap *Share → Add to Home Screen*.
+
+### Run your own copy locally
+The page needs a web server (browsers block key features from `file://`):
+```
+git clone https://github.com/IDEX-maker/HP-41C.git
+cd HP-41C
+python -m http.server 8000        # use python3 on Mac/Linux
+```
+Then open <http://localhost:8000/>.
+
+### Good to know
+- Your memory, programs and loaded ROMs are stored **per browser, per device**. Clearing the
+  site's data (or "Clear memory" in the app) erases them. Phone and PC do not share memory.
+- After an update is published, reload the page once or twice to pick up the new version.
+- Keys follow the real 41 timing, so tap keys briefly; holding a function key about a second
+  shows its name, and holding longer cancels it with `NULL`, like the real calculator.
+- Troubleshooting: if the screen stays blank, press **ON**; if it says it can't load ROMs,
+  check your connection once (the app caches itself for offline use after the first visit).
+
 ## ROM notice
 HP-41 ROM images are **most likely still protected by copyright**, both HP's firmware and the
 third-party modules. The four OS ROMs in `roms/` and `rom_files_260929.zip` come from the ROM set
