@@ -5,12 +5,13 @@ instruction by instruction, together with the LCD driver, keyboard scanner, RAM 
 the calculator behaves like the original (including `MEMORY LOST`, the `NULL` cancel on long key
 holds, `ALPHA` mode and the comma/period/colon punctuation).
 
-**No HP firmware is included.** Load ROM dumps you own with *Load ROM files…* (or drag and drop).
-ROMs are read locally, stored in the browser's IndexedDB, and never uploaded.
+The four 41CX OS ROMs (`roms/NUT0-N`, `NUT1-F`, `NUT2-L`, `XFNS3-3B`) are included; tap
+*Use built-in 41CX ROMs*. Other ROM modules are not included: add your own dumps with
+*Load other ROM files…* (or drag and drop). Those are read locally, stored in the browser's
+IndexedDB, and never uploaded.
 
 ## Using it
 Open `index.html` through any static web server (`python -m http.server`), then choose the ROMs.
-For a 41CX select together: `NUT0-N.ROM`, `NUT1-F.ROM`, `NUT2-L.ROM`, `XFNS3-3B.ROM`.
 Other ROM modules go into pages 5–F; the page/bank of each file can be changed in the table.
 Files named `NUT0*`, `NUT1*`, `NUT2*`, `XFNS3*` are placed automatically.
 
@@ -40,5 +41,5 @@ installable PWA or with Capacitor without code changes.
 ## Credits
 Instruction behaviour and LCD/keyboard details were checked against the published source of
 [Nonpareil](https://github.com/brouhaha/nonpareil) (Eric Smith). This is an independent
-JavaScript implementation, released under the MIT licence (see `LICENSE`). HP ROM images are not
-included and are not covered by it.
+JavaScript implementation, released under the MIT licence (see `LICENSE`), which covers the source
+code only. The ROM images in `roms/` are HP's firmware and are not covered by it.

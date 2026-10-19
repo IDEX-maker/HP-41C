@@ -430,6 +430,19 @@ function updateStatus() {
   $('model').textContent = { c: '41C', cv: '41CV', cx: '41CX' }[ramCfg];
 }
 
+const BUNDLED = ['NUT0-N.ROM', 'NUT1-F.ROM', 'NUT2-L.ROM', 'XFNS3-3B.ROM'];
+$('bundled').addEventListener('click', async () => {
+  try {
+    const files = [];
+    for (const n of BUNDLED) {
+      const r = await fetch('roms/' + n);
+      if (!r.ok) throw new Error(n + ': HTTP ' + r.status);
+      files.push(new File([await r.arrayBuffer()], n));
+    }
+    await addFiles(files);
+    $('romPanel').open = false;
+  } catch (e) { $('status').textContent = 'Could not load built-in ROMs: ' + e.message; }
+});
 $('romfile').addEventListener('change', (e) => { addFiles(Array.from(e.target.files)); e.target.value = ''; });
 $('forget').addEventListener('click', async () => { if (!confirm('Remove all stored ROMs from this browser?')) return; roms = []; await dbClear(); restart(); });
 $('reset').addEventListener('click', () => { restart(); });

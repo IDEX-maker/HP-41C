@@ -80,7 +80,7 @@
     <div class="lcd" id="lcd">
       <svg id="lcdsvg" viewBox="0 0 936 122" role="img" aria-label="Calculator display"></svg>
       <div class="ann" id="ann"></div>
-      <div class="lcdmsg" id="lcdmsg">Load your ROM files below to power on the calculator.</div>
+      <div class="lcdmsg" id="lcdmsg">Open “ROMs &amp; setup” below and tap “Use built-in 41CX ROMs”.</div>
     </div>
     <div id="pad"></div>
   </div>
@@ -88,10 +88,10 @@
   <details class="panel" id="romPanel" open>
     <summary>ROMs &amp; setup</summary>
     <div class="body">
-      <p>This page contains no HP firmware. Choose ROM dumps you own (<code>.ROM</code>, 8192&nbsp;bytes each); they are read locally in your browser and remembered on this device only.
-         For a 41CX select the OS pages together, e.g. <code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code> and <code>XFNS3-3B</code>.</p>
+      <p>The four OS ROMs of the 41CX (<code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code>, <code>XFNS3-3B</code>) are built in. Other ROM modules can be added from your own <code>.ROM</code> dumps (8192&nbsp;bytes each); those files are read locally in your browser and remembered on this device only.</p>
       <div class="btnrow">
-        <label class="btn primary" for="romfile">Load ROM files…</label>
+        <button class="btn primary" id="bundled">Use built-in 41CX ROMs</button>
+        <label class="btn" for="romfile">Load other ROM files…</label>
         <input id="romfile" type="file" accept=".rom,.ROM,.bin" multiple>
         <button class="btn danger" id="forget">Forget all ROMs</button>
       </div>

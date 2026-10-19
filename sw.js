@@ -1,6 +1,7 @@
 // Offline cache for the app shell. ROMs and memory live in IndexedDB/localStorage, not here.
-const CACHE = 'hp41-v1';
+const CACHE = 'hp41-v2';
 const SHELL = ['./', './index.html', './app.js', './nut.js', './chargen.js', './manifest.webmanifest',
+  './roms/NUT0-N.ROM', './roms/NUT1-F.ROM', './roms/NUT2-L.ROM', './roms/XFNS3-3B.ROM',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
