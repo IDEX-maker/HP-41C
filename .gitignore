@@ -1,10 +1,9 @@
 # HP firmware is copyrighted: never commit ROM dumps
-# only the four OS ROMs in roms/ are published; any other dump stays local
+# ROM dumps are published deliberately (see README, "ROM notice"); keep new ones out unless added on purpose
 *.rom
 *.ROM
 *.mod
 *.MOD
-*.zip
 !roms/NUT0-N.ROM
 !roms/NUT1-F.ROM
 !roms/NUT2-L.ROM

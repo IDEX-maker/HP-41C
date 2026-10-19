@@ -10,6 +10,14 @@ The four 41CX OS ROMs (`roms/NUT0-N`, `NUT1-F`, `NUT2-L`, `XFNS3-3B`) are includ
 *Load other ROM files…* (or drag and drop). Those are read locally, stored in the browser's
 IndexedDB, and never uploaded.
 
+## ROM notice
+HP-41 ROM images are **most likely still protected by copyright**, both HP's firmware and the
+third-party modules. The four OS ROMs in `roms/` and `rom_files_260929.zip` come from the ROM set
+published at <https://www.systemyde.com/hp41/files.html>; that page states no licence or
+public-domain status. The maintainer treats them as public domain, but that is unverified and is
+not legal advice. Check the rules where you live and use them at your own risk. If a rights holder
+objects, they will be removed.
+
 ## Using it
 Open `index.html` through any static web server (`python -m http.server`), then choose the ROMs.
 Other ROM modules go into pages 5–F; the page/bank of each file can be changed in the table.
@@ -42,4 +50,4 @@ installable PWA or with Capacitor without code changes.
 Instruction behaviour and LCD/keyboard details were checked against the published source of
 [Nonpareil](https://github.com/brouhaha/nonpareil) (Eric Smith). This is an independent
 JavaScript implementation, released under the MIT licence (see `LICENSE`), which covers the source
-code only. The ROM images in `roms/` are HP's firmware and are not covered by it.
+code only. The ROM images (`roms/`, the zip) are not covered by it; see the ROM notice.

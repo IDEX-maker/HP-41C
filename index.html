@@ -70,6 +70,7 @@
   .status { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); white-space: pre-wrap; }
   .warn { color: #ffcf7a; }
   a { color: var(--accent); }
+  .notice { font-size: 11.5px; color: #c9b27a; border: 1px solid #4a4020; background: #221e10; border-radius: 8px; padding: 8px 10px; }
   .drop { outline: 2px dashed var(--accent); outline-offset: 6px; }
 </style>
 </head>
@@ -89,6 +90,7 @@
     <summary>ROMs &amp; setup</summary>
     <div class="body">
       <p>The four OS ROMs of the 41CX (<code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code>, <code>XFNS3-3B</code>) are built in. Other ROM modules can be added from your own <code>.ROM</code> dumps (8192&nbsp;bytes each); those files are read locally in your browser and remembered on this device only.</p>
+      <p class="notice"><strong>ROM notice:</strong> HP-41 ROM images are <strong>most likely still protected by copyright</strong> (by HP and by the authors of third-party modules). The built-in ROMs come from the set published at <a href="https://www.systemyde.com/hp41/files.html" target="_blank" rel="noopener">systemyde.com</a>, which states no licence. The maintainer of this project treats them as public domain, but that is unverified. Check the rules where you live and use them at your own risk.</p>
       <div class="btnrow">
         <button class="btn primary" id="bundled">Use built-in 41CX ROMs</button>
         <label class="btn" for="romfile">Load other ROM files…</label>
