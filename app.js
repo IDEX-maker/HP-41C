@@ -58,6 +58,7 @@ function guessSlot(name) {
   if (/^XFNS3/.test(n)) return { page: 3, bank: 1 };
   if (/^TIME-/.test(n)) return { page: 5, bank: 1 };      // Time module, bank 1
   if (/^XFNS5/.test(n)) return { page: 5, bank: 2 };      // extended functions, bank 2 of the same page
+  if (/^PRINTER/.test(n)) return { page: 6, bank: 1 };    // HP 82143A printer ROM
   return null;
 }
 
@@ -508,7 +509,7 @@ function updateStatus() {
   $('model').textContent = { c: '41C', cv: '41CV', cx: '41CX' }[ramCfg];
 }
 
-const BUNDLED = ['NUT0-N.ROM', 'NUT1-F.ROM', 'NUT2-L.ROM', 'XFNS3-3B.ROM', 'TIME-3B.ROM', 'XFNS5-2D.ROM'];
+const BUNDLED = ['NUT0-N.ROM', 'NUT1-F.ROM', 'NUT2-L.ROM', 'XFNS3-3B.ROM', 'TIME-3B.ROM', 'XFNS5-2D.ROM', 'PRINTER.ROM'];
 $('bundled').addEventListener('click', async () => {
   try {
     const files = [];

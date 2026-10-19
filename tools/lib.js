@@ -13,6 +13,7 @@ function boot(opts = {}) {
   const load = (page, bank, f) => cpu.loadPage(page, bank, Nut41.parseRom(fs.readFileSync(path.join(ROM_DIR, f))));
   load(0, 0, 'NUT0-N.ROM'); load(1, 0, 'NUT1-F.ROM'); load(2, 0, 'NUT2-L.ROM'); load(3, 0, 'XFNS3-3B.ROM');
   load(5, 0, 'TIME-3B.ROM'); load(5, 1, 'XFNS5-2D.ROM');
+  if (opts.printer) load(6, 0, 'PRINTER.ROM');
   cpu.reset(); runT(cpu, 300000);
   return cpu;
 }
