@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#111111">
+<title>HP-41 Emulator</title>
+<style>
+  :root {
+    --bg: #141414; --body: #232323; --body-hi: #343434; --lcd: #b5c2a3; --lcd-off: #a7b495; --lcd-on: #1c2214;
+    --gold: #e0a52b; --blue: #6aa6ff; --keytop: #3a3a3a; --text: #e8e8e8; --muted: #9a9a9a; --accent: #e0a52b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  main { width: 100%; max-width: 440px; padding: 12px 0 24px; }
+
+  .calc { background: linear-gradient(#2c2c2c, #1d1d1d); border-radius: 14px; padding: 14px 12px 18px; box-shadow: 0 6px 24px #000a, inset 0 1px 0 #ffffff1a; border: 1px solid #000; }
+  .brand { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; letter-spacing: .15em; padding: 0 4px 8px; text-transform: uppercase; }
+
+  .lcd { background: var(--lcd); border-radius: 6px; padding: 8px 8px 4px; box-shadow: inset 0 2px 6px #0007, 0 0 0 3px #111; position: relative; }
+  .lcd svg { width: 100%; display: block; }
+  .ann { display: flex; justify-content: space-between; font: 600 9px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--lcd-off); padding-top: 4px; letter-spacing: .02em; user-select: none; }
+  .ann span.on { color: var(--lcd-on); }
+  .ann .grp { display: inline-flex; gap: 1px; }
+  .seg { stroke: var(--lcd-off); stroke-width: 7; stroke-linecap: round; }
+  .seg.on { stroke: var(--lcd-on); }
+  .dot { fill: var(--lcd-off); } .dot.on { fill: var(--lcd-on); }
+  .lcdmsg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 10px; font-size: 12px; color: var(--lcd-on); background: #b5c2a3ee; border-radius: 6px; }
+  .lcdmsg.show { display: flex; }
+
+  .pad { display: grid; gap: 8px 8px; margin-top: 14px; }
+  .row5 { grid-template-columns: repeat(5, 1fr); }
+  .row4 { grid-template-columns: 0.75fr 1.1fr 1.1fr 1.1fr; }
+  .cell { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+  .cell.span2 { grid-column: span 2; }
+  .gold { height: 13px; color: var(--gold); font-size: 10px; text-align: center; white-space: nowrap; letter-spacing: .02em; }
+  .key { position: relative; height: 38px; border-radius: 5px; background: linear-gradient(var(--keytop), #262626); border: 1px solid #000; box-shadow: 0 2px 0 #000, inset 0 1px 0 #ffffff26; color: #fff; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; touch-action: manipulation; padding: 0; transition: transform .03s; }
+  .key:active, .key.down { transform: translateY(2px); box-shadow: 0 0 0 #000, inset 0 1px 0 #ffffff1a; }
+  .key .alpha { position: absolute; right: 4px; bottom: 1px; color: var(--blue); font-size: 9px; font-weight: 500; }
+  .key.shift { background: linear-gradient(#f0b73a, #c58a14); }
+  .key.sw { height: 26px; font-size: 11px; background: linear-gradient(#444, #2a2a2a); }
+  .key.num { font-size: 16px; }
+  .key.wide { font-size: 12px; }
+  .spacer { visibility: hidden; }
+  .lbl { color: var(--gold); font-size: 10px; text-align: center; height: 13px; }
+
+  details.panel { margin-top: 18px; background: #1c1c1c; border: 1px solid #2c2c2c; border-radius: 10px; }
+  details.panel > summary { padding: 12px 14px; cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.panel > summary::after { content: "▾"; color: var(--muted); }
+  details.panel[open] > summary::after { content: "▴"; }
+  .panel .body { padding: 0 14px 14px; display: grid; gap: 12px; }
+  .panel p { margin: 0; color: var(--muted); font-size: 12.5px; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.btn, label.btn, select { font: inherit; color: var(--text); background: #2a2a2a; border: 1px solid #444; border-radius: 8px; padding: 9px 12px; cursor: pointer; min-height: 40px; }
+  button.btn.primary, label.btn.primary { background: var(--accent); color: #1a1200; border-color: var(--accent); font-weight: 600; }
+  button.btn:hover, label.btn:hover { filter: brightness(1.15); }
+  button.btn.danger { border-color: #8a3a3a; color: #ffb3b3; }
+  input[type=file] { display: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 6px; }
+  td { padding: 4px 6px; border-top: 1px solid #2c2c2c; }
+  td select { min-height: 32px; padding: 3px 6px; }
+  td button { min-height: 32px; padding: 3px 9px; }
+  .fld { display: grid; gap: 4px; }
+  .fld label { font-size: 12px; color: var(--muted); }
+  .status { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); white-space: pre-wrap; }
+  .warn { color: #ffcf7a; }
+  a { color: var(--accent); }
+  .drop { outline: 2px dashed var(--accent); outline-offset: 6px; }
+</style>
+</head>
+<body>
+<main id="main">
+  <div class="calc">
+    <div class="brand"><span>HEWLETT·PACKARD</span><span id="model">41CX</span></div>
+    <div class="lcd" id="lcd">
+      <svg id="lcdsvg" viewBox="0 0 936 122" role="img" aria-label="Calculator display"></svg>
+      <div class="ann" id="ann"></div>
+      <div class="lcdmsg" id="lcdmsg">Load your ROM files below to power on the calculator.</div>
+    </div>
+    <div id="pad"></div>
+  </div>
+
+  <details class="panel" id="romPanel" open>
+    <summary>ROMs &amp; setup</summary>
+    <div class="body">
+      <p>This page contains no HP firmware. Choose ROM dumps you own (<code>.ROM</code>, 8192&nbsp;bytes each); they are read locally in your browser and remembered on this device only.
+         For a 41CX select the OS pages together, e.g. <code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code> and <code>XFNS3-3B</code>.</p>
+      <div class="btnrow">
+        <label class="btn primary" for="romfile">Load ROM files…</label>
+        <input id="romfile" type="file" accept=".rom,.ROM,.bin" multiple>
+        <button class="btn danger" id="forget">Forget all ROMs</button>
+      </div>
+      <table id="romtable"><thead><tr><th>File</th><th>Page</th><th>Bank</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="fld"><label for="ramcfg">Memory (changing it clears memory)</label>
+        <select id="ramcfg"><option value="c">HP-41C — 64 registers</option><option value="cv">HP-41CV — 319 registers</option><option value="cx" selected>HP-41CX — 441 registers (with X-Memory)</option></select></div>
+      <div class="fld"><label for="speed">Speed</label>
+        <select id="speed"><option value="1">1× — original speed</option><option value="5">5×</option><option value="20" selected>20×</option><option value="100">100×</option></select></div>
+      <div class="btnrow">
+        <button class="btn" id="reset">Restart (keep memory)</button>
+        <button class="btn danger" id="wipe">Clear memory</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </details>
+</main>
+<script src="chargen.js"></script>
+<script src="nut.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

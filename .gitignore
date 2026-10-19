@@ -1,0 +1,6 @@
+# HP firmware is copyrighted: never commit ROM dumps
+*.rom
+*.ROM
+*.mod
+*.MOD
+node_modules/
