@@ -20,6 +20,8 @@ Works in current Chrome, Edge, Firefox and Safari. Everything runs in your brows
 sent to a server.
 
 ### Install on a Google Pixel (or any Android phone)
+Full walkthrough with troubleshooting: **[docs/INSTALL-PIXEL.md](docs/INSTALL-PIXEL.md)**. Short version:
+
 1. Open <https://idex-maker.github.io/HP-41C/> in **Chrome**.
 2. Tap the **⋮** menu, then **Install app** (some versions say **Add to Home screen**), then **Install**.
 3. Open **HP-41** from the home screen. It runs full-screen and works offline.
