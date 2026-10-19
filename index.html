@@ -99,12 +99,14 @@
   <details class="panel" id="printerPanel">
     <summary>Printer (HP 82143A)</summary>
     <div class="body">
-      <p>Everything the calculator prints appears on the paper below. The printer ROM is built in; <code>PRX</code>, <code>PRA</code>, <code>PRSTK</code>, <code>ADV</code> and the other print functions run the real printer firmware. Printing to paper or a PDF uses your browser's print dialog, so on a PC you can pick any printer, and on Android any Wi-Fi printer that Android can see.</p>
+      <p>Everything the calculator prints appears on the paper below. The printer ROM is built in; <code>PRX</code>, <code>PRA</code>, <code>PRSTK</code>, <code>ADV</code> and the other print functions run the real printer firmware. The printer's MAN/NORM/TRACE switch isn't emulated, so ordinary calculations print only if you turn on “Print each calculation”, which puts the number in X on the paper after every operation. Printing to paper or a PDF uses your browser's print dialog, so on a PC you can pick any printer, and on Android any Wi-Fi printer that Android can see.</p>
       <div class="paperbox" id="paperbox"><div class="empty" id="paperempty">The paper is empty.</div><canvas id="paper" width="0" height="0" aria-label="Printer paper"></canvas></div>
       <div class="fld"><label for="printdest">Send the paper to</label>
         <select id="printdest"><option value="screen">On-screen paper only</option><option value="print">A printer (browser print dialog)</option><option value="pdf">A PDF file (print dialog, “Save as PDF”)</option></select></div>
       <div class="fld"><label for="printmode">When</label>
         <select id="printmode"><option value="collect">Collect the paper; print when I tap “Print tape”</option><option value="immediate">Print automatically at each ADV</option></select></div>
+      <div class="fld"><label for="printcalc">Print each calculation</label>
+        <select id="printcalc"><option value="off">Off; only print functions print</option><option value="on">On; print X after every operation</option></select></div>
       <div class="btnrow">
         <button class="btn primary" id="printtape" disabled>Print tape</button>
         <button class="btn" id="cleartape">Clear tape</button>

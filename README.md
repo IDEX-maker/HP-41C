@@ -99,7 +99,10 @@ Chrome I checked the on-screen paper, both print modes (the print-dialog call re
 print layout. Not tried: a real printer or a real Android phone. The protocol was worked out from the ROM's behaviour, see
 [docs/printer-protocol.md](docs/printer-protocol.md); two of the ROM's printer-handshake routines are skipped
 because the real printer's answers are not modelled. Not modelled: the mode switch (MAN/TRACE/NORM), graphics
-printing (`PRBUF` with graphic data) and the printer's special characters beyond a few look-alikes.
+printing (`PRBUF` with graphic data) and the printer's special characters beyond a few look-alikes. As a stand-in
+for TRACE/NORM, the Printer panel's "Print each calculation" option puts the number in X on the paper, right-aligned
+like `PRX`, whenever the calculator goes idle after a key. It skips digit entry, prompts, messages and ALPHA/PRGM, and
+doesn't copy the real printer's TRACE line format.
 
 ### Time module
 The 41CX clock runs in real time (also while the calculator is off or the page is closed), keeps its

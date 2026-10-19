@@ -54,6 +54,7 @@ const printer = new window.Printer.Hp82143a();
 const tape = new window.TapeLib.Tape();
 let printDest = lsGet('hp41.printdest') || 'screen';
 let printMode = lsGet('hp41.printmode') || 'collect';
+let printCalc = lsGet('hp41.printcalc') === 'on';
 
 // Fixed slots of the 41CX base system; other modules go into the first free port page.
 function guessSlot(name) {
@@ -125,7 +126,7 @@ function powerUp(clearRam) {
   updateStatus();
 }
 
-cpu.onSleep = () => { ramDirty = true; saveRam(); };
+cpu.onSleep = (displayOn) => { ramDirty = true; saveRam(); if (displayOn) printCalculation(); };
 setInterval(() => { if (cpu.awake) ramDirty = true; saveRam(); }, 4000);
 window.addEventListener('pagehide', saveRam);
 document.addEventListener('visibilitychange', () => { if (document.hidden) { ramDirty = true; saveRam(); } });
@@ -369,6 +370,7 @@ function advance(budget) {
         activeKey.started = true;
         activeKey.startCycle = cpu.cycles;
         activeKey.phase = 'down';
+        calcKeyPending = !NO_CALC_KEYS.includes(activeKey.code) || promptOpen; lineSinceKey = false;
         cpu.pressKey(activeKey.code);
         if (!cpu.awake) { cpu.releaseKey(); activeKey = null; }   // ignored (deep sleep)
         continue;
@@ -432,7 +434,26 @@ function printTape() {
   img.src = c.toDataURL('image/png');
 }
 
+// "Print each calculation": when the calculator goes idle after a key, put the number on the display
+// on the paper, unless the key already printed something itself (PRX and the like).
+// A function prompt (XEQ __, STO __) opens with ALPHA off; typing into the ALPHA register never shows "_" with ALPHA off.
+const NO_CALC_KEYS = [0x18, 0xc6, 0xc5, 0xc4, 0x12];    // ON, USER, PRGM, ALPHA, shift: count only inside a prompt
+let calcKeyPending = false, lineSinceKey = false, promptOpen = false;
+function displayText() { return cpu.getDisplay().map((x) => (x ? CG.text[x.ch] + ['', '.', ':', ','][x.punct] : ' ')).join(''); }
+function printCalculation() {
+  if (cpu.keyDown) return;
+  const text = displayText(), ann = cpu.getAnnunciators();
+  if (!text.includes('_')) promptOpen = false; else if (!(ann & 1)) promptOpen = true;
+  if (!printCalc || !calcKeyPending) return;
+  if (lineSinceKey) { calcKeyPending = false; return; }
+  const line = window.Printout.calcLine(text, ann);
+  if (line === null) return;
+  calcKeyPending = false;
+  printer.onLine({ text: line });
+}
+
 printer.onLine = (line) => {
+  lineSinceKey = true;
   tape.add(line);
   schedulePaper();
   if (window.Printout.shouldPrintNow(printDest, printMode, line.text === '' ? 'adv' : 'line')) { printTape(); tape.clear(); schedulePaper(); }
@@ -440,6 +461,7 @@ printer.onLine = (line) => {
 
 $('printdest').addEventListener('change', (e) => { printDest = e.target.value; lsSet('hp41.printdest', printDest); schedulePaper(); });
 $('printmode').addEventListener('change', (e) => { printMode = e.target.value; lsSet('hp41.printmode', printMode); });
+$('printcalc').addEventListener('change', (e) => { printCalc = e.target.value === 'on'; lsSet('hp41.printcalc', e.target.value); });
 $('printtape').addEventListener('click', () => { if (window.Printout.shouldPrintNow(printDest, printMode, 'manual')) printTape(); });
 $('cleartape').addEventListener('click', () => { tape.clear(); schedulePaper(); });
 
@@ -581,7 +603,7 @@ window.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.fi
   $('ramcfg').value = ramCfg; $('speed').value = String(speed);
   if (!['screen', 'print', 'pdf'].includes(printDest)) printDest = 'screen';
   if (!['collect', 'immediate'].includes(printMode)) printMode = 'collect';
-  $('printdest').value = printDest; $('printmode').value = printMode; drawPaper();
+  $('printdest').value = printDest; $('printmode').value = printMode; $('printcalc').value = printCalc ? 'on' : 'off'; drawPaper();
   if (!Array.from($('speed').options).some((o) => o.value === String(speed))) { speed = 20; $('speed').value = '20'; }
   const stored = await dbAll();
   roms = stored.map((r) => ({ name: r.name, bytes: r.bytes, page: r.page, bank: r.bank }));
