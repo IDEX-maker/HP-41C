@@ -99,7 +99,7 @@
   <details class="panel" id="printerPanel">
     <summary>Printer (HP 82143A)</summary>
     <div class="body">
-      <p>Everything the calculator prints appears on the paper below. The printer ROM is built in; <code>PRX</code>, <code>PRA</code>, <code>PRSTK</code>, <code>LIST</code>, <code>ADV</code> and the others work as on the real printer. Printing to paper or a PDF uses your browser's print dialog, so on a PC you can pick any printer, and on Android any Wi-Fi printer that Android can see.</p>
+      <p>Everything the calculator prints appears on the paper below. The printer ROM is built in; <code>PRX</code>, <code>PRA</code>, <code>PRSTK</code>, <code>ADV</code> and the other print functions run the real printer firmware. Printing to paper or a PDF uses your browser's print dialog, so on a PC you can pick any printer, and on Android any Wi-Fi printer that Android can see.</p>
       <div class="paperbox" id="paperbox"><div class="empty" id="paperempty">The paper is empty.</div><canvas id="paper" width="0" height="0" aria-label="Printer paper"></canvas></div>
       <div class="fld"><label for="printdest">Send the paper to</label>
         <select id="printdest"><option value="screen">On-screen paper only</option><option value="print">A printer (browser print dialog)</option><option value="pdf">A PDF file (print dialog, “Save as PDF”)</option></select></div>
@@ -115,7 +115,7 @@
   <details class="panel" id="romPanel" open>
     <summary>ROMs &amp; setup</summary>
     <div class="body">
-      <p>The 41CX system ROMs (<code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code>, <code>XFNS3-3B</code>, <code>TIME-3B</code>, <code>XFNS5-2D</code>) are built in. Other ROM modules can be added from your own <code>.ROM</code> dumps (8192&nbsp;bytes each) or <code>.MOD</code> files; those files are read locally in your browser and remembered on this device only.</p>
+      <p>The 41CX system ROMs (<code>NUT0-N</code>, <code>NUT1-F</code>, <code>NUT2-L</code>, <code>XFNS3-3B</code>, <code>TIME-3B</code>, <code>XFNS5-2D</code>) and the HP&nbsp;82143A printer ROM (<code>PRINTER</code>) are built in. Other ROM modules can be added from your own <code>.ROM</code> dumps (8192&nbsp;bytes each) or <code>.MOD</code> files; those files are read locally in your browser and remembered on this device only.</p>
       <p class="notice"><strong>ROM notice:</strong> HP-41 ROM images are <strong>most likely still protected by copyright</strong> (by HP and by the authors of third-party modules). The built-in ROMs come from the set published at <a href="https://www.systemyde.com/hp41/files.html" target="_blank" rel="noopener">systemyde.com</a>, which states no licence. The maintainer of this project treats them as public domain, but that is unverified. Check the rules where you live and use them at your own risk.</p>
       <div class="btnrow">
         <button class="btn primary" id="bundled">Use built-in 41CX ROMs</button>

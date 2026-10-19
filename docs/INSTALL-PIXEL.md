@@ -107,3 +107,6 @@ of ROM images.
   a PC do not share memory.
 - **Uninstall:** long-press the icon and choose **Uninstall**. This also removes the stored ROMs
   and memory.
+
+## Printing
+Open the **Printer** panel under the calculator. Set *Send the paper to* to **A printer**, run a print function such as `PRX`, then tap **Print tape**. Chrome opens Android's print dialog; pick your Wi-Fi printer there (the phone must see it, for example through the Default Print Service or your printer maker's print plug-in). Choose **Save as PDF** in the same dialog to keep the paper as a file. Printing needs one tap each time; Android does not allow silent printing. This was verified in desktop Chrome, not on a real Android phone.
