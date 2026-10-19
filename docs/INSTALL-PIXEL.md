@@ -45,6 +45,27 @@ If neither menu entry appears:
 - **ON** turns the calculator off and on. Memory and the on/off state are saved between sessions.
 - **ROMs & setup** also lets you change the speed, or choose 41C / 41CV / 41CX memory.
 
+## Set the time and date
+The clock keeps running while the app is closed and remembers its setting. It uses the clock of the device
+you run it on, so set it once on each device (a phone and a PC do not share it). These steps were tested on
+the emulated 41CX firmware.
+
+**Time.** Enter the time as `HH.MMSS` in 24-hour form, then run `SETIME`:
+1. Type `1 0 . 3 0 0 0` for 10:30:00 (for 1:45 PM type `13.4500`).
+2. Press `XEQ`, press `ALPHA`, type `S E T I M E`, press `ALPHA` again.
+3. Check it with `XEQ` `ALPHA` `T I M E` `ALPHA`: it shows `10:30:02 AM`.
+
+**Date.** Enter the date as `MM.DDYYYY`, then run `SETDATE`:
+1. Type `1 0 . 1 9 2 0 2 6` for 19 October 2026.
+2. Press `XEQ`, press `ALPHA`, type `S E T D A T E`, press `ALPHA` again.
+3. Check it with `XEQ` `ALPHA` `D A T E` `ALPHA`: it shows `10/19/2026` and the weekday (cut off, e.g. `:MO` for Monday).
+
+In ALPHA mode you type the blue letters on the keys (for example `S` is on the `8` key, `E` on `LN`, `T` on
+`9`, `I` on `COS`, `M` on `RCL`). Digits typed in ALPHA mode need `SHIFT` first.
+
+`CLOCK` shows a live clock (any key stops it); `TIME` and `DATE` show the current values.
+If you get `DATA ERROR`, the number was not a valid `HH.MMSS` or `MM.DDYYYY` value; enter it again.
+
 ## Optional: import and export programs
 - **Import program (.RAW)…** loads a `.RAW` program file from the phone's storage into the calculator's
   program memory. Afterwards run it with `XEQ`, `ALPHA` (label name) `ALPHA`, or press `R/S`.
