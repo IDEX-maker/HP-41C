@@ -15,6 +15,10 @@ Output: `app-release-bundle.aab` (upload to Google Play) and `app-release-signed
 Raise `appVersionCode` (and `appVersion`) in `twa-manifest.json` for every Play upload.
 The wrapper only loads the website, so web updates reach installed apps without a new upload.
 
+Keep `enableSiteSettingsShortcut` set to `true` in `twa-manifest.json`. With `false` the generated app crashes on launch
+(`Component class ...ManageDataLauncherActivity does not exist`): the library toggles an activity that the manifest then lacks.
+Verified on a Pixel 10 Pro XL: the app opens full screen with no browser bar.
+
 ## Signing and verification
 - The upload keystore is **not** in this repo. Back it up: without it you cannot publish updates.
 - Chrome only hides the browser bar if `https://idex-maker.github.io/.well-known/assetlinks.json` lists the
