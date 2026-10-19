@@ -40,4 +40,5 @@ installable PWA or with Capacitor without code changes.
 ## Credits
 Instruction behaviour and LCD/keyboard details were checked against the published source of
 [Nonpareil](https://github.com/brouhaha/nonpareil) (Eric Smith). This is an independent
-JavaScript implementation. Pick a licence for this repository before publishing it.
+JavaScript implementation, released under the MIT licence (see `LICENSE`). HP ROM images are not
+included and are not covered by it.
